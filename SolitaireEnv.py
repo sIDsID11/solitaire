@@ -13,8 +13,8 @@ class Action(Enum):
 
 @dataclass
 class SolitaireEnv:
-    start_board: Optional[list[list[int]]] = field(default=None)
-    goal_pos: Optional[tuple[int, int]] = field(default=None)
+    start_board: Optional[list[list[int]]] = None
+    goal_pos: Optional[tuple[int, int]] = None
     board: list[list[int]] = field(init=False)
     boardsize: int = field(init=False)
 
@@ -36,21 +36,14 @@ class SolitaireEnv:
         for row in self.board:
             assert len(row) == self.boardsize
 
-        if self.goal_pos is None:
-            self.goal_pos = (self.boardsize // 2, self.boardsize // 2)
-        self.reset()
-
     def reset(self):
-        self.board = self.start_board.copy()
-
-    def __hash__(self):
-        return hash(tuple([tuple(row) for row in self.board]))
+        self.board = [row.copy() for row in self.start_board]
 
     def clone(self):
         new_board = [row.copy() for row in self.board]
         return SolitaireEnv(new_board)
 
-    def moves_single_cell(self, x: int, y: int) -> np.array:
+    def moves_single_cell(self, x: int, y: int) -> list[Action]:
         if self.board[y][x] == -1:
             AttributeError(f"Cell at position ({x}, {y}) is not part of the board.")
         if self.board[y][x] == 0:
@@ -64,20 +57,21 @@ class SolitaireEnv:
                 continue
             if self.board[y1][x1] != 1 or self.board[y2][x2] != 0:
                 continue
-            moves.append(((x, y), a))
+            moves.append(a)
         return moves
 
-    def moves(self) -> np.array:
+    @property
+    def moves(self) -> list[tuple[tuple[int, int], Action]]:
         moves = []
         for y in range(self.boardsize):
             for x in range(self.boardsize):
                 if self.board[y][x] == -1:
                     continue
-                moves += self.moves_single_cell(x, y)
+                moves += [((x, y), a) for a in self.moves_single_cell(x, y)]
         return moves
 
     def step(self, x: int, y: int, a: Action):
-        if ((x, y), a) not in self.moves():
+        if ((x, y), a) not in self.moves:
             raise AttributeError(f"Invalid action '{a}' at cell '{(x, y)}'.")
         dx, dy = a.value
         x1, y1 = x + dx, y + dy
@@ -95,7 +89,9 @@ class SolitaireEnv:
         self.board[y2][x2] = 0
 
     def visualize_board(self):
+        print("  " + " ".join(str(i) for i in range(self.boardsize)))
         for y in range(self.boardsize):
+            print(str(y), end=" ")
             for x in range(self.boardsize):
                 match self.board[y][x]:
                     case -1:
@@ -138,10 +134,26 @@ class SolitaireEnv:
 
     @property
     def done(self) -> bool:
-        return self.moves() == []
+        return self.moves == []
 
     @property
     def won(self) -> bool:
         one_count = sum(1 for y in range(self.boardsize) for x in range(self.boardsize) if self.board[y][x] == 1)
-        x_goal, y_goal = self.goal_pos
-        return one_count == 1 and self.board[y_goal][x_goal] == 1
+        goal_achieved = True  # if there is no goal
+        if self.goal_pos:
+            x_goal, y_goal = self.goal_pos
+            goal_achieved = self.board[y_goal][x_goal] == 1
+        return one_count == 1 and goal_achieved
+
+
+if __name__ == "__main__":
+    board = [
+        [0, 1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 1, 1],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [1, 1, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1, 0]
+    ]
+    env = SolitaireEnv(board)
+    print(env.moves)
