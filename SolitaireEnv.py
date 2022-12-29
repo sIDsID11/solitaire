@@ -13,38 +13,29 @@ class Action(Enum):
 
 @dataclass
 class SolitaireEnv:
-    start_board: Optional[list[list[int]]] = None
+    start_board: Optional[list[list[int]]]
     goal_pos: Optional[tuple[int, int]] = None
     board: list[list[int]] = field(init=False)
     boardsize: int = field(init=False)
 
     def __post_init__(self):
-        if self.start_board is None:
-            self.start_board = [
-                [-1, -1, -1,  1,  1,  1, -1, -1, -1],
-                [-1, -1, -1,  1,  1,  1, -1, -1, -1],
-                [-1, -1, -1,  1,  1,  1, -1, -1, -1],
-                [1,   1,  1,  1,  1,  1,  1,  1,  1],
-                [1,   1,  1,  1,  0,  1,  1,  1,  1],
-                [1,   1,  1,  1,  1,  1,  1,  1,  1],
-                [-1, -1, -1,  1,  1,  1, -1, -1, -1],
-                [-1, -1, -1,  1,  1,  1, -1, -1, -1],
-                [-1, -1, -1,  1,  1,  1, -1, -1, -1]
-            ]
         self.reset()
         self.boardsize = len(self.board)
         for row in self.board:
             assert len(row) == self.boardsize
 
+    def __hash__(self) -> str:
+        return hash(((tuple(row) for row in self.board), self.goal_pos))
+
     def reset(self):
         self.board = [row.copy() for row in self.start_board]
 
     def clone(self):
-        new_board = [row.copy() for row in self.board]
-        return SolitaireEnv(new_board)
+        new_board = [row[:] for row in self.board]
+        return SolitaireEnv(new_board, goal_pos=self.goal_pos)
 
     def moves_single_cell(self, x: int, y: int) -> list[Action]:
-        if self.board[y][x] == -1:
+        if self.board[y][x] == 2:
             AttributeError(f"Cell at position ({x}, {y}) is not part of the board.")
         if self.board[y][x] == 0:
             return []
@@ -65,7 +56,7 @@ class SolitaireEnv:
         moves = []
         for y in range(self.boardsize):
             for x in range(self.boardsize):
-                if self.board[y][x] == -1:
+                if self.board[y][x] == 2:
                     continue
                 moves += [((x, y), a) for a in self.moves_single_cell(x, y)]
         return moves
@@ -94,7 +85,7 @@ class SolitaireEnv:
             print(str(y), end=" ")
             for x in range(self.boardsize):
                 match self.board[y][x]:
-                    case -1:
+                    case 2:
                         print(" ", end=" ")
                     case 0:
                         print("◯", end=" ")
@@ -140,7 +131,7 @@ class SolitaireEnv:
     def won(self) -> bool:
         one_count = sum(1 for y in range(self.boardsize) for x in range(self.boardsize) if self.board[y][x] == 1)
         goal_achieved = True  # if there is no goal
-        if self.goal_pos:
+        if self.goal_pos is not None:
             x_goal, y_goal = self.goal_pos
             goal_achieved = self.board[y_goal][x_goal] == 1
         return one_count == 1 and goal_achieved
