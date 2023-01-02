@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
-import curses
-import time
 
 
 class Action(Enum):
@@ -99,54 +97,6 @@ class SolitaireEnv:
     def visualize_board(self):
         print(self.board_str)
 
-    def simulate(self, actions: list[tuple[tuple[int, int], Action]], wait_time: float = 1.):
-        self.reset()
-        stdscr = curses.initscr()
-        curses.noecho()
-        curses.cbreak()
-        stdscr.keypad(1)
-        for i, s in enumerate(self.board_str.split("\n")):
-            stdscr.addstr(i, 0, s)
-        for a in actions:
-            (x, y), m = a
-            self.step(x, y, m)
-            stdscr.clear()
-            for i, s in enumerate(self.board_str.split("\n")):
-                stdscr.addstr(i, 0, s)
-            stdscr.refresh()
-            time.sleep(wait_time)
-        curses.endwin()
-
-    def choose_cell(self) -> tuple[int, int]:
-        while True:
-            y = int(input("row:\n> "))
-            x = int(input("column:\n> "))
-            movs = self.moves_single_cell(x, y)
-            if movs != []:
-                break
-            print(f"Stone '({x}, {y})' has no legal moves. Choose another one.")
-        return x, y
-
-    def choose_action(self, x: int, y: int) -> Action:
-        actions = [a.name for _, a in self.moves_single_cell(x, y)]
-        while True:
-            a = input(f"Enter move {actions}\n> ")
-            if a in actions:
-                return Action[a]
-
-    def play(self):
-        while not self.done:
-            print(10 * "-")
-            self.visualize_board()
-            print()
-            x, y = self.choose_cell()
-            a = self.choose_action(x, y)
-            self.step(x, y, a)
-        if self.won:
-            print("Yeahh you won congrats")
-        else:
-            print("You lost. Better luck next time.")
-
     @property
     def done(self) -> bool:
         return self.moves == []
@@ -154,7 +104,7 @@ class SolitaireEnv:
     @property
     def won(self) -> bool:
         one_count = sum(1 for y in range(self.boardsize) for x in range(self.boardsize) if self.board[y][x] == 1)
-        goal_achieved = True  # if there is no goal
+        goal_achieved = True  # if there is no goal position set
         if self.goal_pos is not None:
             x_goal, y_goal = self.goal_pos
             goal_achieved = self.board[y_goal][x_goal] == 1
@@ -171,23 +121,5 @@ if __name__ == "__main__":
         [2, 2, 1, 1, 1, 2, 2],
         [2, 2, 1, 1, 1, 2, 2],
     ]
-    board_win = [
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 1, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0]
-    ]
-    env1 = SolitaireEnv(board)
-    env2 = env1.clone()
-    env2.step(3, 1, Action.down)
-    env2.step(3, 4, Action.up)
-    env2.step(1, 3, Action.right)
-    env2.step(4, 3, Action.left)
-    env_solved = SolitaireEnv(board_win)
-
-    env1.visualize_board()
-    env2.visualize_board()
-    print(env2.moves)
+    env = SolitaireEnv(board, goal_pos=(3, 3))
+    env.play()
