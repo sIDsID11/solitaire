@@ -59,4 +59,3 @@ if __name__ == "__main__":
     env = SolitaireEnv(board, goal_pos=(3, 3))
     s = SolitaireSolver()
     actions = s.solve(env, verbose=True)
-    env.simulate(actions)

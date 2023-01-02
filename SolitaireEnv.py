@@ -122,4 +122,3 @@ if __name__ == "__main__":
         [2, 2, 1, 1, 1, 2, 2],
     ]
     env = SolitaireEnv(board, goal_pos=(3, 3))
-    env.play()
