@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
-import numpy as np
+import curses
+import time
 
 
 class Action(Enum):
@@ -79,19 +80,42 @@ class SolitaireEnv:
         self.board[y1][x1] = 1
         self.board[y2][x2] = 0
 
-    def visualize_board(self):
-        print("  " + " ".join(str(i) for i in range(self.boardsize)))
+    @property
+    def board_str(self) -> str:
+        s = "  " + " ".join(str(i) for i in range(self.boardsize)) + "\n"
         for y in range(self.boardsize):
-            print(str(y), end=" ")
+            s += str(y) + " "
             for x in range(self.boardsize):
                 match self.board[y][x]:
                     case 2:
-                        print(" ", end=" ")
+                        s += " " + " "
                     case 0:
-                        print("◯", end=" ")
+                        s += "◯" + " "
                     case 1:
-                        print("●", end=" ")
-            print()
+                        s += "●" + " "
+            s += "\n"
+        return s
+
+    def visualize_board(self):
+        print(self.board_str)
+
+    def simulate(self, actions: list[tuple[tuple[int, int], Action]], wait_time: float = 1.):
+        self.reset()
+        stdscr = curses.initscr()
+        curses.noecho()
+        curses.cbreak()
+        stdscr.keypad(1)
+        for i, s in enumerate(self.board_str.split("\n")):
+            stdscr.addstr(i, 0, s)
+        for a in actions:
+            (x, y), m = a
+            self.step(x, y, m)
+            stdscr.clear()
+            for i, s in enumerate(self.board_str.split("\n")):
+                stdscr.addstr(i, 0, s)
+            stdscr.refresh()
+            time.sleep(wait_time)
+        curses.endwin()
 
     def choose_cell(self) -> tuple[int, int]:
         while True:
