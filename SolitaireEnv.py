@@ -19,16 +19,16 @@ class SolitaireEnv:
     boardsize: int = field(init=False)
 
     def __post_init__(self):
-        self.reset()
+        self.board = [row[:] for row in self.start_board]
         self.boardsize = len(self.board)
         for row in self.board:
             assert len(row) == self.boardsize
 
     def __hash__(self) -> str:
-        return hash(((tuple(row) for row in self.board), self.goal_pos))
+        return hash(tuple(tuple(row) for row in self.board))
 
     def reset(self):
-        self.board = [row.copy() for row in self.start_board]
+        self.board = [row[:] for row in self.start_board]
 
     def clone(self):
         new_board = [row[:] for row in self.board]
@@ -139,12 +139,31 @@ class SolitaireEnv:
 
 if __name__ == "__main__":
     board = [
-        [0, 1, 0, 0, 0, 0],
-        [0, 1, 0, 0, 1, 1],
-        [0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [1, 1, 0, 0, 1, 0],
-        [0, 0, 0, 0, 1, 0]
+        [2, 2, 1, 1, 1, 2, 2],
+        [2, 2, 1, 1, 1, 2, 2],
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 0, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1],
+        [2, 2, 1, 1, 1, 2, 2],
+        [2, 2, 1, 1, 1, 2, 2],
     ]
-    env = SolitaireEnv(board)
-    print(env.moves)
+    board_win = [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
+    ]
+    env1 = SolitaireEnv(board)
+    env2 = env1.clone()
+    env2.step(3, 1, Action.down)
+    env2.step(3, 4, Action.up)
+    env2.step(1, 3, Action.right)
+    env2.step(4, 3, Action.left)
+    env_solved = SolitaireEnv(board_win)
+
+    env1.visualize_board()
+    env2.visualize_board()
+    print(env2.moves)
