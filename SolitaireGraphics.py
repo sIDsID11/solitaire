@@ -1,12 +1,10 @@
 import curses
 import time
-from dataclasses import dataclass
 
 from SolitaireEnv import SolitaireEnv, Action
 from SolitaireSolver import SolitaireSolver
 
 
-@dataclass
 class SolitaireGraphics:
     def draw_board(self, env: SolitaireEnv, stdscr):
         for i, s in enumerate(env.board_str.split("\n")):
