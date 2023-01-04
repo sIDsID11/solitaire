@@ -91,8 +91,8 @@ class SolitaireGame:
         self.choose_game_setting()
         self.play_one_round()
 
-    # def __del__(self):
-        # self.graphics.endwin()
+    def __del__(self):
+        self.graphics.endwin()
 
 
 if __name__ == "__main__":
