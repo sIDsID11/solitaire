@@ -85,6 +85,12 @@ class SolitaireGame:
                 continue
             a = Action(d)
             self.env.step(sel_x, sel_y, a)
+        end_text = "Congrats! You solved it :D" if self.env.won else "You lost... Better try next time."
+        self.graphics.clear()
+        self.graphics.draw_board(self.env, start_row, offset_x)
+        self.graphics.draw_text(end_text, start_row=self.env.boardsize + 2)
+        self.graphics.refresh()
+        self.graphics.wait_for_key()
 
     def play(self):
         self.say_hello_and_rules()
