@@ -78,11 +78,11 @@ class SolitaireGraphics:
             if env.board[cell_y][cell_x] != 2:
                 return cell_x, cell_y
 
-    def wait_for_any_key(self):
+    def wait_for_key(self):
         while True:
             key = self.stdscr.getch()
-            if key != curses.ERR:
-                break
+            if key != curses.ERR and key != curses.KEY_MOUSE:
+                return key
 
     def simulate(self, env: SolitaireEnv, actions: list[tuple[tuple[int, int], Action]], wait_time: float = 1.):
         env.reset()
