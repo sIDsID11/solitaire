@@ -9,8 +9,10 @@ from SolitaireEnv import SolitaireEnv, Action
 @dataclass
 class SolitaireGraphics:
     stdscr: curses.window = field(init=False)
+    next_line: int = field(init=False)
 
     def __post_init__(self):
+        self.next_line = 0
         self.stdscr = curses.initscr()
         curses.noecho()
         curses.cbreak()
@@ -19,6 +21,7 @@ class SolitaireGraphics:
 
     def clear(self):
         self.stdscr.clear()
+        self.next_line = 0
 
     def refresh(self):
         self.stdscr.refresh()
@@ -26,12 +29,13 @@ class SolitaireGraphics:
     def endwin(self):
         curses.endwin()
 
-    def draw_text(self, text: str, start_row: int = 0, offset_x: int = 0):
+    def draw_text(self, text: str, offset_x: int = 0, new_lines: int = 0):
         for i, s in enumerate(text.split("\n")):
-            self.stdscr.addstr(start_row + i, offset_x, s)
+            self.stdscr.addstr(self.next_line + new_lines + i, offset_x, s)
+        self.next_line += new_lines + text.count("\n") + 1
 
-    def draw_board(self, env: SolitaireEnv, start_row: int = 0, offset_x: int = 0):
-        self.draw_text(env.board_str, start_row, offset_x)
+    def draw_board(self, env: SolitaireEnv, offset_x: int = 0, new_lines: int = 0):
+        self.draw_text(env.board_str, offset_x, new_lines)
 
     def read_input(self, text: str, row: int, offset_x: int, answer_length: int) -> str:
         curses.echo(True)  # enable the displaying of characters
