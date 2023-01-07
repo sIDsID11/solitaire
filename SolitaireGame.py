@@ -2,43 +2,73 @@ from dataclasses import dataclass, field
 from typing import Optional
 import os
 import pickle
-import curses
+from enum import Enum
 
 from SolitaireEnv import SolitaireEnv, Action, GameSettings
 from SolitaireSolver import SolitaireSolver
 from SolitaireGraphics import SolitaireGraphics
 
 
+class StatisticType(Enum):
+    games_played = 1
+    games_won = 2
+    tries_for_first_win = 3
+
+
 @dataclass
-class SolitaireGame:
+class Statistics:
     folder_path: str
+    board_stats: dict[GameSettings, dict[StatisticType, Optional[int]]] = field(init=False)
     stats_filename: str = field(init=False)
-    active_board: int = field(init=False)
-    solver: SolitaireSolver = field(init=False)
-    env: SolitaireEnv = field(init=False)
-    graphics: SolitaireGraphics = field(init=False)
-    stats: dict[str, int | bool] = field(init=False)
 
     def __post_init__(self):
-        self.solver = SolitaireSolver()
-        self.graphics = SolitaireGraphics()
-
-        # Stat savings
         self.stats_filename = "user.stats"
         self.folder_path = os.path.join(self.folder_path, "PegSolitaire")
         os.makedirs(self.folder_path, exist_ok=True)
         stats_file = os.path.join(self.folder_path, self.stats_filename)
-        self.stats = {}
+        self.board_stats = {}
         if not os.path.exists(stats_file):
-            for i in range(len(GameSettings)):
-                self.stats[f"board{i + 1}_games_won"] = 0
-                self.stats[f"board{i + 1}_tries_for_first_win"] = -1
-                self.stats[f"board{i + 1}_games_played"] = 0
+            for gs in GameSettings:
+                self.board_stats[gs] = {}
+                self.board_stats[gs][StatisticType.games_played] = 0
+                self.board_stats[gs][StatisticType.games_won] = 0
+                self.board_stats[gs][StatisticType.tries_for_first_win] = None
             with open(stats_file, 'wb') as f:
-                pickle.dump(self.stats, f)
+                pickle.dump(self.board_stats, f)
         else:
             with open(stats_file, 'rb') as f:
-                self.stats = pickle.load(f)
+                self.board_stats = pickle.load(f)
+
+    def save_stats(self):
+        stats_file = os.path.join(self.folder_path, self.stats_filename)
+        with open(stats_file, 'wb') as f:
+            pickle.dump(self.board_stats, f)
+
+    def get_board_stat(self, board: GameSettings, stat_type: StatisticType) -> dict[StatisticType, int]:
+        return self.board_stats[board][stat_type]
+
+    def update_game_played(self, board: GameSettings):
+        self.board_stats[board][StatisticType.games_played] += 1
+
+    def update_game_won(self, board: GameSettings):
+        self.board_stats[board][StatisticType.games_played] += 1
+        if not self.board_stats[board][StatisticType.tries_for_first_win]:
+            self.board_stats[board][StatisticType.tries_for_first_win] = self.board_stats[board][StatisticType.games_played]
+
+
+@dataclass
+class SolitaireGame:
+    folder_path: str
+    active_board: GameSettings = field(init=False)
+    solver: SolitaireSolver = field(init=False)
+    env: SolitaireEnv = field(init=False)
+    graphics: SolitaireGraphics = field(init=False)
+    stats: Statistics = field(init=False)
+
+    def __post_init__(self):
+        self.solver = SolitaireSolver()
+        self.graphics = SolitaireGraphics()
+        self.stats = Statistics(self.folder_path)
 
     def say_hello_and_rules(self):
         self.graphics.clear()
@@ -69,31 +99,16 @@ class SolitaireGame:
             n = self.graphics.wait_for_key()
             if ord("1") <= n <= ord(str(len(GameSettings))):
                 n = int(chr(n))
-                board, goal_pos = list(GameSettings)[n - 1].value
+                setting = list(GameSettings)[n - 1]
+                board, goal_pos = setting.value
                 self.env = SolitaireEnv(board, goal_pos)
-                self.active_board = n
+                self.active_board = setting
                 return
             self.graphics.draw_text("Invalid board number. Try again.")
             self.graphics.refresh()
 
-    def save_stats(self):
-        stats_file = os.path.join(self.folder_path, self.stats_filename)
-        with open(stats_file, 'wb') as f:
-            pickle.dump(self.stats, f)
-
-    def update_solved_stats(self, board_num: int):
-        if self.stats[f"board{board_num}_games_won"] == 0:
-            self.stats[f"board{board_num}_tries_for_first_win"] = self.stats[f"board{board_num}_games_played"]
-        self.stats[f"board{board_num}_games_won"] += 1
-
-    def update_played_games_stats(self):
-        self.stats[f"board{self.active_board}_games_played"] += 1
-
-    def get_board_stats(self, board_num: int) -> tuple[int, int, int]:
-        return self.stats[f"board{board_num}_games_won"], self.stats[f"board{board_num}_tries_for_first_win"], self.stats[f"board{board_num}_games_played"]
-
     def play_one_round(self, start_row: int = 0, offset_x: int = 0):
-        self.update_played_games_stats()
+        self.stats.update_game_played(self.active_board)
         peg_selected: Optional[tuple[int, int]] = None
         selected_str = ""
         while not self.env.done:
@@ -135,12 +150,14 @@ class SolitaireGame:
         self.graphics.draw_text(end_text)
         self.graphics.draw_text("Press key to continue.")
         self.graphics.refresh()
+        self.stats.update_game_won(self.active_board)
         self.graphics.wait_for_key()
 
     def ask_for_new_game(self):
         self.graphics.clear()
         self.graphics.draw_text("If you want to select a different board, press 'b'.")
         self.graphics.draw_text("If you want to quit, press 'q'")
+        self.graphics.draw_text("If you want to show stats, press 's'")
         self.graphics.draw_text("To play another game, press any other key.")
         self.graphics.refresh()
         key = self.graphics.wait_for_key()
@@ -148,13 +165,26 @@ class SolitaireGame:
             exit()
         if key == ord("b"):
             self.choose_game_setting()
+        if key == ord("s"):
+            self.show_stats()
+            self.ask_for_new_game()
+
+    def show_stats(self):
+        self.graphics.clear()
+        for board, board_stat in self.stats.board_stats.items():
+            self.graphics.draw_text(f"{board.name}:", new_lines=1)
+            for stat, stat_val in board_stat.items():
+                self.graphics.draw_text(f"{stat.name}: {stat_val}", offset_x=4)
+        self.graphics.draw_text("Press any key to continue.", new_lines=1)
+        self.graphics.refresh()
+        self.graphics.wait_for_key()
 
     def run(self):
         self.say_hello_and_rules()
         self.choose_game_setting()
         while True:
             self.play_one_round()
-            self.save_stats()
+            self.stats.save_stats()
             self.ask_for_new_game()
             self.env.reset()
 
