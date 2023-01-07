@@ -63,26 +63,25 @@ class SolitaireGame:
             click_pos = self.graphics.get_clicked_pos()
             if not click_pos:
                 continue
+            selected_str = ""
             click_x, click_y = click_pos
             cell_pos = self.graphics.get_clicked_cell(self.env, start_row, offset_x, click_x, click_y)
             if not cell_pos or self.env.board[cell_pos[1]][cell_pos[0]] == 2:
-                if peg_selected:
-                    sel_x, sel_y = peg_selected
-                    peg_selected = None
-                    selected_str = f"Unselected pen at ({sel_x}, {sel_y})"
-                else:
-                    selected_str = ""
+                peg_selected = None
                 continue
             cell_x, cell_y = cell_pos
             if self.env.board[cell_y][cell_x] == 1:
+                moves = self.env.moves_single_cell(cell_x, cell_y)
+                if len(moves) == 1:  # Automatically move if only one possibility
+                    self.env.step(cell_x, cell_y, moves[0])
+                    continue
                 peg_selected = cell_pos
-                selected_str = f"Selected pen at ({cell_x}, {cell_y})"
+                selected_str = f"Multiple moves for pen at({sel_x}, {sel_y}) possible. Click destination to specify."
                 continue
             sel_x, sel_y = peg_selected
             d = (((cell_x - sel_x) / 2), (cell_y - sel_y) / 2)
             if d not in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 peg_selected = None
-                selected_str = f"Unselected pen at ({sel_x}, {sel_y})"
                 continue
             a = Action(d)
             self.env.step(sel_x, sel_y, a)
@@ -115,8 +114,8 @@ class SolitaireGame:
             self.ask_for_new_game()
             self.env.reset()
 
-    def __del__(self):
-        self.graphics.endwin()
+    # def __del__(self):
+        # self.graphics.endwin()
 
 
 if __name__ == "__main__":
