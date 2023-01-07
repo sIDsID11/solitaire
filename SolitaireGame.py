@@ -79,7 +79,7 @@ class SolitaireGame:
                 selected_str = f"Selected pen at ({cell_x}, {cell_y})"
                 continue
             sel_x, sel_y = peg_selected
-            d = (int((cell_x - sel_x) / 2), int((cell_y - sel_y) / 2))
+            d = (((cell_x - sel_x) / 2), (cell_y - sel_y) / 2)
             if d not in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 peg_selected = None
                 selected_str = f"Unselected pen at ({sel_x}, {sel_y})"
@@ -99,8 +99,8 @@ class SolitaireGame:
         self.choose_game_setting()
         self.play_one_round()
 
-    def __del__(self):
-        self.graphics.endwin()
+    # def __del__(self):
+        # self.graphics.endwin()
 
 
 if __name__ == "__main__":
