@@ -57,7 +57,8 @@ class SolitaireGame:
         while not self.env.done:
             self.graphics.clear()
             self.graphics.draw_board(self.env, start_row, offset_x)
-            self.graphics.draw_text(selected_str, start_row=self.env.boardsize + 2)
+            self.graphics.draw_text(f"The goal position is {self.env.goal_pos}", start_row=self.env.boardsize + 2)
+            self.graphics.draw_text(selected_str, start_row=self.env.boardsize + 4)
             self.graphics.refresh()
             click_pos = self.graphics.get_clicked_pos()
             if not click_pos:
@@ -85,6 +86,7 @@ class SolitaireGame:
                 continue
             a = Action(d)
             self.env.step(sel_x, sel_y, a)
+            selected_str = ""
         end_text = "Congrats! You solved it :D" if self.env.won else "You lost... Better try next time."
         self.graphics.clear()
         self.graphics.draw_board(self.env, start_row, offset_x)
