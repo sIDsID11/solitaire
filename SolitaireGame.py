@@ -114,8 +114,8 @@ class SolitaireGame:
             self.ask_for_new_game()
             self.env.reset()
 
-    # def __del__(self):
-        # self.graphics.endwin()
+    def __del__(self):
+        self.graphics.endwin()
 
 
 if __name__ == "__main__":
