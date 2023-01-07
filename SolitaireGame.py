@@ -36,7 +36,7 @@ class SolitaireGame:
 
     def choose_game_setting(self) -> tuple[list[list[int]], tuple[int, int]]:
         self.graphics.clear()
-        self.graphics.draw_text("There are different board types:", start_row=0)
+        self.graphics.draw_text("There are different boards:", start_row=0)
         for i, gs in enumerate(GameSettings):
             self.graphics.draw_text(f"{i + 1}. {gs.name}", start_row=2 + i, offset_x=4)
         self.graphics.draw_text("Press number of board you want to play.", start_row=len(GameSettings) + 3)
@@ -87,20 +87,36 @@ class SolitaireGame:
             a = Action(d)
             self.env.step(sel_x, sel_y, a)
             selected_str = ""
-        end_text = "Congrats! You solved it :D" if self.env.won else "You lost... Better try next time."
         self.graphics.clear()
         self.graphics.draw_board(self.env, start_row, offset_x)
+        end_text = "Congrats! You solved it :D" if self.env.won else "You lost... Better try next time."
         self.graphics.draw_text(end_text, start_row=self.env.boardsize + 2)
+        self.graphics.draw_text("Press key to continue.", start_row=self.env.boardsize + 3)
         self.graphics.refresh()
         self.graphics.wait_for_key()
+
+    def ask_for_new_game(self):
+        self.graphics.clear()
+        self.graphics.draw_text("If you want to select a different board, press 'b'.", start_row=0)
+        self.graphics.draw_text("If you want to quit, press 'q'.", start_row=1)
+        self.graphics.draw_text("To play another game, press any other key.", start_row=2)
+        self.graphics.refresh()
+        key = self.graphics.wait_for_key()
+        if key == ord("q"):
+            exit()
+        if key == ord("b"):
+            self.choose_game_setting()
 
     def play(self):
         self.say_hello_and_rules()
         self.choose_game_setting()
-        self.play_one_round()
+        while True:
+            self.play_one_round()
+            self.ask_for_new_game()
+            self.env.reset()
 
-    # def __del__(self):
-        # self.graphics.endwin()
+    def __del__(self):
+        self.graphics.endwin()
 
 
 if __name__ == "__main__":
