@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
+import os
+import pickle
+import curses
 
 from SolitaireEnv import SolitaireEnv, Action, GameSettings
 from SolitaireSolver import SolitaireSolver
@@ -8,13 +11,34 @@ from SolitaireGraphics import SolitaireGraphics
 
 @dataclass
 class SolitaireGame:
+    folder_path: str
+    stats_filename: str = field(init=False)
+    active_board: int = field(init=False)
     solver: SolitaireSolver = field(init=False)
     env: SolitaireEnv = field(init=False)
     graphics: SolitaireGraphics = field(init=False)
+    stats: dict[str, int | bool] = field(init=False)
 
     def __post_init__(self):
         self.solver = SolitaireSolver()
         self.graphics = SolitaireGraphics()
+
+        # Stat savings
+        self.stats_filename = "user.stats"
+        self.folder_path = os.path.join(self.folder_path, "PegSolitaire")
+        os.makedirs(self.folder_path, exist_ok=True)
+        stats_file = os.path.join(self.folder_path, self.stats_filename)
+        self.stats = {}
+        if not os.path.exists(stats_file):
+            for i in range(len(GameSettings)):
+                self.stats[f"board{i + 1}_games_won"] = 0
+                self.stats[f"board{i + 1}_tries_for_first_win"] = -1
+                self.stats[f"board{i + 1}_games_played"] = 0
+            with open(stats_file, 'wb') as f:
+                pickle.dump(self.stats, f)
+        else:
+            with open(stats_file, 'rb') as f:
+                self.stats = pickle.load(f)
 
     def say_hello_and_rules(self):
         self.graphics.clear()
@@ -44,14 +68,32 @@ class SolitaireGame:
         while True:
             n = self.graphics.wait_for_key()
             if ord("1") <= n <= ord(str(len(GameSettings))):
-                n = int(chr(n)) - 1
-                board, goal_pos = list(GameSettings)[n].value
+                n = int(chr(n))
+                board, goal_pos = list(GameSettings)[n - 1].value
                 self.env = SolitaireEnv(board, goal_pos)
+                self.active_board = n
                 return
             self.graphics.draw_text("Invalid board number. Try again.", start_row=len(GameSettings) + 4)
             self.graphics.refresh()
 
+    def save_stats(self):
+        stats_file = os.path.join(self.folder_path, self.stats_filename)
+        with open(stats_file, 'wb') as f:
+            pickle.dump(self.stats, f)
+
+    def update_solved_stats(self, board_num: int):
+        if self.stats[f"board{board_num}_games_won"] == 0:
+            self.stats[f"board{board_num}_tries_for_first_win"] = self.stats[f"board{board_num}_games_played"]
+        self.stats[f"board{board_num}_games_won"] += 1
+
+    def update_played_games_stats(self):
+        self.stats[f"board{self.active_board}_games_played"] += 1
+
+    def get_board_stats(self, board_num: int) -> tuple[int, int, int]:
+        return self.stats[f"board{board_num}_games_won"], self.stats[f"board{board_num}_tries_for_first_win"], self.stats[f"board{board_num}_games_played"]
+
     def play_one_round(self, start_row: int = 0, offset_x: int = 0):
+        self.update_played_games_stats()
         peg_selected: Optional[tuple[int, int]] = None
         selected_str = ""
         while not self.env.done:
@@ -106,11 +148,12 @@ class SolitaireGame:
         if key == ord("b"):
             self.choose_game_setting()
 
-    def play(self):
+    def run(self):
         self.say_hello_and_rules()
         self.choose_game_setting()
         while True:
             self.play_one_round()
+            self.save_stats()
             self.ask_for_new_game()
             self.env.reset()
 
@@ -119,5 +162,5 @@ class SolitaireGame:
 
 
 if __name__ == "__main__":
-    g = SolitaireGame()
-    g.play()
+    g = SolitaireGame("/home/sid/Documents")
+    g.run()
